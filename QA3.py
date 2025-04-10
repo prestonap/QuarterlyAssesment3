@@ -81,3 +81,145 @@ for category, questions in questions_data.items():
             cursor.execute(f"INSERT INTO {category} (question, option1, option2, option3, option4, answer) VALUES (?, ?, ?, ?, ?, ?)", q)
 
 conn.commit()
+# ---------------------- MAIN APPLICATION ---------------------- #
+class QuizBowlApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Quiz Bowl App")
+        self.main_screen()
+
+    def clear_screen(self):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+    def main_screen(self):
+        self.clear_screen()
+        tk.Label(self.root, text="Quiz Bowl Application", font=('Arial', 20)).pack(pady=20)
+        tk.Button(self.root, text="Administrator Login", width=30, command=self.admin_login).pack(pady=10)
+        tk.Button(self.root, text="Take a Quiz", width=30, command=self.select_category).pack(pady=10)
+
+    def admin_login(self):
+        self.clear_screen()
+        tk.Label(self.root, text="Admin Login", font=('Arial', 16)).pack(pady=10)
+        tk.Label(self.root, text="Enter Password:").pack(pady=5)
+        self.password_entry = tk.Entry(self.root, show="*")
+        self.password_entry.pack(pady=5)
+        tk.Button(self.root, text="Login", command=self.check_admin_password).pack(pady=5)
+        tk.Button(self.root, text="Back", command=self.main_screen).pack(pady=5)
+
+    def check_admin_password(self):
+        if self.password_entry.get() == "Hello123":
+            self.admin_menu()
+        else:
+            messagebox.showerror("Error", "Incorrect password")
+
+    def admin_menu(self):
+        self.clear_screen()
+        tk.Label(self.root, text="Admin Menu", font=('Arial', 16)).pack(pady=10)
+        tk.Button(self.root, text="Add Question", command=self.add_question_form).pack(pady=5)
+        tk.Button(self.root, text="View Questions", command=self.view_questions).pack(pady=5)
+        tk.Button(self.root, text="Back", command=self.main_screen).pack(pady=5)
+
+    def add_question_form(self):
+        self.clear_screen()
+        self.q_vars = {}
+        tk.Label(self.root, text="Add Question", font=('Arial', 16)).pack(pady=10)
+        self.q_vars['category'] = ttk.Combobox(self.root, values=categories)
+        self.q_vars['category'].pack(pady=5)
+        self.q_vars['question'] = tk.Entry(self.root, width=60)
+        self.q_vars['question'].pack(pady=5)
+        for i in range(1, 5):
+            self.q_vars[f'option{i}'] = tk.Entry(self.root, width=40)
+            self.q_vars[f'option{i}'].pack(pady=5)
+        self.q_vars['answer'] = tk.Entry(self.root, width=40)
+        self.q_vars['answer'].pack(pady=5)
+        tk.Button(self.root, text="Submit", command=self.submit_question).pack(pady=5)
+        tk.Button(self.root, text="Back", command=self.admin_menu).pack(pady=5)
+
+    def submit_question(self):
+        cat = self.q_vars['category'].get()
+        if cat not in categories:
+            messagebox.showerror("Error", "Please select a valid category")
+            return
+        try:
+            cursor.execute(f"INSERT INTO {cat} (question, option1, option2, option3, option4, answer) VALUES (?, ?, ?, ?, ?, ?)",
+                (self.q_vars['question'].get(),
+                self.q_vars['option1'].get(),
+                self.q_vars['option2'].get(),
+                self.q_vars['option3'].get(),
+                self.q_vars['option4'].get(),
+                self.q_vars['answer'].get()))
+            conn.commit()
+            messagebox.showinfo("Success", "Question added successfully!")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def view_questions(self):
+        self.clear_screen()
+        tk.Label(self.root, text="Select Category", font=('Arial', 16)).pack(pady=10)
+        self.cat_select = ttk.Combobox(self.root, values=categories)
+        self.cat_select.pack(pady=5)
+        tk.Button(self.root, text="View", command=self.display_questions).pack(pady=5)
+        tk.Button(self.root, text="Back", command=self.admin_menu).pack(pady=5)
+
+    def display_questions(self):
+        cat = self.cat_select.get()
+        if cat not in categories:
+            messagebox.showerror("Error", "Invalid category")
+            return
+        self.clear_screen()
+        tk.Label(self.root, text=f"Questions in {cat}", font=('Arial', 16)).pack(pady=10)
+        rows = cursor.execute(f"SELECT * FROM {cat}").fetchall()
+        for row in rows:
+            q_text = f"{row[0]}. {row[1]} ({row[6]})"
+            tk.Label(self.root, text=q_text, wraplength=500).pack(anchor='w', padx=10)
+        tk.Button(self.root, text="Back", command=self.view_questions).pack(pady=10)
+
+    def select_category(self):
+        self.clear_screen()
+        tk.Label(self.root, text="Select Quiz Category", font=('Arial', 16)).pack(pady=10)
+        self.quiz_category = ttk.Combobox(self.root, values=categories)
+        self.quiz_category.pack(pady=5)
+        tk.Button(self.root, text="Start Quiz", command=self.start_quiz).pack(pady=5)
+        tk.Button(self.root, text="Back", command=self.main_screen).pack(pady=5)
+
+    def start_quiz(self):
+        cat = self.quiz_category.get()
+        if cat not in categories:
+            messagebox.showerror("Error", "Select a valid category")
+            return
+        self.questions = [
+            Question(q[1], [q[2], q[3], q[4], q[5]], q[6])
+            for q in cursor.execute(f"SELECT * FROM {cat}").fetchall()
+        ]
+        self.q_index = 0
+        self.score = 0
+        self.quiz_screen()
+
+    def quiz_screen(self):
+        self.clear_screen()
+        if self.q_index >= len(self.questions):
+            tk.Label(self.root, text=f"Quiz Over! Your Score: {self.score}/{len(self.questions)}", font=('Arial', 16)).pack(pady=20)
+            tk.Button(self.root, text="Back to Main Menu", command=self.main_screen).pack(pady=10)
+            return
+
+        q = self.questions[self.q_index]
+        tk.Label(self.root, text=f"Q{self.q_index + 1}: {q.question}", font=('Arial', 14), wraplength=500).pack(pady=10)
+        self.selected_option = tk.StringVar()
+        for opt in q.options:
+            tk.Radiobutton(self.root, text=opt, variable=self.selected_option, value=opt).pack(anchor='w', padx=20)
+        tk.Button(self.root, text="Submit Answer", command=self.submit_answer).pack(pady=10)
+
+    def submit_answer(self):
+        selected = self.selected_option.get()
+        if not selected:
+            messagebox.showwarning("Warning", "Please select an answer")
+            return
+        correct = self.questions[self.q_index].check_answer(selected)
+        if correct:
+            self.score += 1
+            messagebox.showinfo("Correct", "That's correct!")
+        else:
+            messagebox.showinfo("Incorrect", f"Wrong! The correct answer was: {self.questions[self.q_index].answer}")
+        self.q_index += 1
+        self.quiz_screen()
