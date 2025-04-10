@@ -21,7 +21,8 @@ for category in categories:
             answer TEXT NOT NULL
         )
     """)
-#Questions for each category
+
+# Questions for each category
 questions_data = {
     "BusinessApps": [
         ("Which software is commonly used for spreadsheet tasks?", "Excel", "Word", "Access", "PowerPoint", "Excel"),
@@ -81,6 +82,17 @@ for category, questions in questions_data.items():
             cursor.execute(f"INSERT INTO {category} (question, option1, option2, option3, option4, answer) VALUES (?, ?, ?, ?, ?, ?)", q)
 
 conn.commit()
+
+# ---------------------- QUESTION CLASS ---------------------- #
+class Question:
+    def __init__(self, question, options, answer):
+        self.question = question
+        self.options = options
+        self.answer = answer
+
+    def check_answer(self, selected):
+        return self.answer == selected
+
 # ---------------------- MAIN APPLICATION ---------------------- #
 class QuizBowlApp:
     def __init__(self, root):
