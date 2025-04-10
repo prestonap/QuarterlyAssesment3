@@ -223,3 +223,10 @@ class QuizBowlApp:
             messagebox.showinfo("Incorrect", f"Wrong! The correct answer was: {self.questions[self.q_index].answer}")
         self.q_index += 1
         self.quiz_screen()
+
+# ---------------------- START APP ---------------------- #
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.geometry("600x600")
+    app = QuizBowlApp(root)
+    root.mainloop()
